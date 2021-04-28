@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>GLHF {{username}}!</title>
+{% endblock %}
+
+{% block body %}
+<h1>Let's go, {{username}}!</h1>
+
+{% for i in range(game_board.rows) %}
+    {% for j in range(game_board.columns) %}
+        {% if game_board.minimal_hint_matrix[i][j] == -1 %}
+            {% if game_board.image_matrix[i][j] == -2 %}
+                <b class="color">&nbsp&nbsp&nbsp&nbsp</b>
+            {% else %}
+                <b>&nbsp&nbsp&nbsp&nbsp</b>
+            {% endif %}
+        {% else %}
+            {% if game_board.image_matrix[i][j] == -2 %}
+                <b class="color">&nbsp{{game_board.minimal_hint_matrix[i][j]}}&nbsp</b>
+            {% else %}
+                <b>&nbsp{{game_board.minimal_hint_matrix[i][j]}}&nbsp</b>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    <br>
+{% endfor %}
+
+{% if is_game_finished == False %}
+<form action="/game" method="POST">
+    <span>Try to point a square that should be painted!</span> <br>
+    <label for="row_index">Row index: </label> <input type="text" name="row_index" id="row_index"> <br>
+    <label for="column_index">Column index: </label> <input type="text" name="column_index" id="column_index"> <br>
+    <input type="submit" value="Check!">
+</form>
+
+<form action="/save/file" method="POST">
+    <input type="submit" value="Save game state to file!">
+</form>
+{% else %}
+<h1>Congratulations!</h1>
+{% endif %}
+
+{% endblock %}
