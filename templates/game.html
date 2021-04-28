@@ -13,13 +13,21 @@
         {% if i == 0 and j == 0%}
             <b style="background-color: white">&nbsp&nbsp&nbsp&nbsp</b>
             {% for k in range(game_board.rows) %}
-                 <b class="index">&nbsp{{k}}&nbsp</b>
+                {% if k >= 10 %}
+                    <b class="index">{{k}}</b>
+                {% else %}
+                    <b class="index">&nbsp{{k}}&nbsp</b>
+                {% endif %}
             {% endfor %}
             <br>
         {% endif %}
 
         {% if j == 0 %}
-            <b class="index">&nbsp{{i}}&nbsp</b>
+            {% if i >= 10 %}
+                <b class="index">{{i}}</b>
+            {% else %}
+                <b class="index">&nbsp{{i}}&nbsp</b>
+            {% endif %}
         {% endif %}
 
         {% if game_board.minimal_hint_matrix[i][j] == -1 %}
