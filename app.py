@@ -1,20 +1,17 @@
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, session
 from werkzeug.utils import secure_filename
 import os
-import Game as fill_a_pix
+import game as game_module
 import pickle
+import jsonpickle
 
-UPLOAD_FOLDER = 'files'
+UPLOAD_FOLDER = 'uploaded_game_images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app = Flask(__name__)
 
 app.secret_key = os.urandom(16)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-
-GAME_OBJECT = None
-USERNAME = None
 
 
 def allowed_file(filename):
@@ -24,9 +21,6 @@ def allowed_file(filename):
 
 @app.route('/', methods=('GET', 'POST'))
 def index():
-    global GAME_OBJECT
-    global USERNAME
-
     if request.method == 'POST':
         username = request.form['username']
         rows = request.form['rows']
@@ -49,9 +43,11 @@ def index():
         if error is None and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            USERNAME = username
+            session['username'] = username
             file_path = f"{UPLOAD_FOLDER}/{filename}"
-            GAME_OBJECT = fill_a_pix.Game(int(rows), int(columns), file_path)
+            game_object = game_module.Game(int(rows), int(columns), file_path)
+            game_object_json = jsonpickle.encode(game_object)
+            session['game_object'] = game_object_json
             return redirect(url_for('game'))
 
         flash(error)
@@ -61,10 +57,10 @@ def index():
 
 @app.route('/game', methods=('GET', 'POST'))
 def game():
-    global USERNAME
-    global GAME_OBJECT
-
     is_game_finished = False
+    game_object_json = session['game_object']
+    game_object = jsonpickle.decode(game_object_json)
+    is_guess_right = ''
 
     if request.method == 'POST':
         row_index = request.form['row_index']
@@ -76,22 +72,21 @@ def game():
             error = 'Column index is required.'
 
         if error is None:
-            GAME_OBJECT.make_a_guess(int(row_index), int(column_index))
-            is_game_finished = GAME_OBJECT.check_if_game_ended()
+            is_guess_right = game_object.make_a_guess(int(row_index), int(column_index))
+            is_game_finished = game_object.check_if_game_ended()
+            game_object_json = jsonpickle.encode(game_object)
+            session['game_object'] = game_object_json
         else:
             flash(error)
 
-    return render_template("game.html", username=USERNAME, game_board=GAME_OBJECT, is_game_finished=is_game_finished)
+    return render_template("game.html", username=session['username'], game_board=game_object, is_game_finished=is_game_finished, is_guess_right=is_guess_right)
 
 
 @app.route('/load/memory', methods=['POST'])
 def load_from_memory():
-    global USERNAME
-    global GAME_OBJECT
-
     if request.method == 'POST':
         error = None
-        if not USERNAME or not GAME_OBJECT:
+        if 'username' not in session or 'game_object' not in session:
             error = 'App memory is empty.'
 
         if error is None:
@@ -104,12 +99,11 @@ def load_from_memory():
 
 @app.route('/save/file', methods=['POST'])
 def save_to_file():
-    global USERNAME
-    global GAME_OBJECT
-
-    save_name = f"saves/{USERNAME}"
+    save_name = f"saves/{session['username']}"
     outfile = open(save_name, 'wb')
-    pickle.dump(GAME_OBJECT, outfile)
+    game_object_json = session['game_object']
+    game_object = jsonpickle.decode(game_object_json)
+    pickle.dump(game_object, outfile)
     outfile.close()
 
     return redirect(url_for('game'))
@@ -117,9 +111,6 @@ def save_to_file():
 
 @app.route('/load/file', methods=['POST'])
 def load_from_file():
-    global USERNAME
-    global GAME_OBJECT
-
     if request.method == 'POST':
         username = request.form['username_save']
         error = None
@@ -130,8 +121,10 @@ def load_from_file():
         if error is None:
             save_name = f"saves/{username}"
             infile = open(save_name, 'rb')
-            USERNAME = username
-            GAME_OBJECT = pickle.load(infile)
+            session['username'] = username
+            game_object = pickle.load(infile)
+            game_object_json = jsonpickle.encode(game_object)
+            session['game_object'] = game_object_json
             infile.close()
             return redirect(url_for('game'))
 

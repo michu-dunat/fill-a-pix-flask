@@ -11,3 +11,8 @@ b.color {
     background-color: black;
     color: white;
 }
+
+b.index {
+    background-color: white;
+    color: khaki;
+}
